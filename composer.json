@@ -1,0 +1,19 @@
+{
+    "name": "xqkeji/xq-app-attach",
+    "description": "一个基于新齐低代码开发框架后台管理的附件管理模块，是整个后台管理系统的附件上传和删除的管理模块。",
+    "type": "library",
+    "license": "SSPL-1.0",
+    "autoload": {
+        "psr-4": {
+            "xqkeji\\app\\attach\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "xqkeji.cn"
+        }
+    ],
+    "extra": {
+        
+    }
+}
