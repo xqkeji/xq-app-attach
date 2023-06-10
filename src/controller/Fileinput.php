@@ -41,7 +41,7 @@ class Fileinput extends Controller
 		   $thumbConfig=false;
 		   if(isset($_GET['thumb']))
 		   {
-		   		$thumb=filter_var($_GET['thumb'], FILTER_SANITIZE_STRING);
+		   		$thumb=htmlspecialchars($_GET['thumb']);
 		   		if(isset($this->thumbConfig[$thumb]))
 		   		{
 		   			$thumbConfig=$this->thumbConfig[$thumb];
@@ -49,7 +49,7 @@ class Fileinput extends Controller
 		   }
 		   $file=current($files);
 		   
-		   $module_name=filter_var($_POST['moduleName'], FILTER_SANITIZE_STRING);
+		   $module_name=htmlspecialchars($_POST['moduleName']);
 		   $image_filename='';
 		   $image_url='';
 		   $thumb_filename='';
@@ -154,14 +154,14 @@ class Fileinput extends Controller
 				'image_url'=>$image_url,
 				'thumb_url'=>$thumb_url,
 				'type'=>'image',
-				'caption'=>filter_var($_POST['fileId'], FILTER_SANITIZE_STRING),
+				'caption'=>htmlspecialchars($_POST['fileId']),
 				'size'=>$file->getSize(),
 				'auth_type'=>$this->auth->getCurrentAuthType(),
 				'auth_id'=>$this->auth->getCurrentAuthId(),
-				'module_name'=>filter_var($_POST['moduleName'], FILTER_SANITIZE_STRING),
-				'controller_name'=>filter_var($_POST['controllerName'], FILTER_SANITIZE_STRING),
-				'action_name'=>filter_var($_POST['actionName'], FILTER_SANITIZE_STRING),
-				'action_params'=>filter_var($_POST['actionParams'], FILTER_SANITIZE_STRING),
+				'module_name'=>htmlspecialchars($_POST['moduleName']),
+				'controller_name'=>htmlspecialchars($_POST['controllerName']),
+				'action_name'=>htmlspecialchars($_POST['actionName']),
+				'action_params'=>htmlspecialchars($_POST['actionParams']),
 				'source_id'=>'',
 			];
 			$model->save($row);
@@ -174,7 +174,7 @@ class Fileinput extends Controller
 				'initialPreviewConfig'=>[
 					 [
                         'type' => 'image',  
-                        'caption' => filter_var($_POST['fileId'], FILTER_SANITIZE_STRING),
+                        'caption' => htmlspecialchars($_POST['fileId']),
                         'key' => $key,       // keys for deleting/reorganizing preview
                         'size' => $file->getSize(),    // file size
 						'zoomData'=>$image_url,
@@ -199,7 +199,7 @@ class Fileinput extends Controller
 		$this->view->disable();
 		$ds=XQ_DS;
 		$www_path=call_user_func(['xqkeji\\App','getWwwPath']);
-		$key=filter_var($_POST['key'], FILTER_SANITIZE_STRING);
+		$key=htmlspecialchars($_POST['key']);
 		$model=$this->getModel();
 		$row=$model->find($key);
 		$image_url=$row->getAttr('image_url');
