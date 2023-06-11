@@ -200,7 +200,7 @@ class Fileinput extends Controller
 		$ds=XQ_DS;
 		$www_path=call_user_func(['xqkeji\\App','getWwwPath']);
 		$key=htmlspecialchars($_POST['key']);
-		$model=$this->getModel();
+		$model=Model::getModel();
 		$row=$model->find($key);
 		$image_url=$row->getAttr('image_url');
 		$image_path=str_replace(['/'], $ds, $image_url);
