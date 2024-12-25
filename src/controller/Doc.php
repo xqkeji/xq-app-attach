@@ -133,18 +133,26 @@ class Doc extends Controller
 		$key=htmlspecialchars($_POST['key']);
 		$model=Model::getModel();
 		$row=$model->find($key);
-		$doc_url=$row->getAttr('file_url');
-		$doc_path=str_replace(['/'], $ds, $doc_url);
-        $filePath=$www_path.$doc_path;
-        if(is_file($filePath))
-        {
-        	unlink($filePath);
-        	$result=['key'=>$key,'message'=>'删除文档成功'];
-        }
-        else
-        {
-        	$result=['key'=>$key,'error'=>'文件不存在'];
-        }
+		if(!empty($row))
+		{
+			$doc_url=$row->getAttr('file_url');
+			$doc_path=str_replace(['/'], $ds, $doc_url);
+			$filePath=$www_path.$doc_path;
+			if(is_file($filePath))
+			{
+				unlink($filePath);
+				$result=['key'=>$key,'message'=>'删除文档成功'];
+			}
+			else
+			{
+				$result=['key'=>$key,'error'=>'文件不存在'];
+			}
+		}
+		else
+		{
+			$result=['key'=>'','error'=>'查询不到文档'];
+		}
+		
 		
 		$this->returnJSON($result);
 

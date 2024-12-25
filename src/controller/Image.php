@@ -202,18 +202,26 @@ class Image extends Controller
 		$key=htmlspecialchars($_POST['key']);
 		$model=Model::getModel();
 		$row=$model->find($key);
-		$image_url=$row->getAttr('image_url');
-		$image_path=str_replace(['/'], $ds, $image_url);
-        $filePath=$www_path.$image_path;
-        if(is_file($filePath))
-        {
-        	unlink($filePath);
-        	$result=['key'=>$key,'message'=>'删除图片成功'];
-        }
-        else
-        {
-        	$result=['key'=>$key,'error'=>'文件不存在'];
-        }
+		if(!empty($row))
+		{
+			$image_url=$row->getAttr('image_url');
+			$image_path=str_replace(['/'], $ds, $image_url);
+			$filePath=$www_path.$image_path;
+			if(is_file($filePath))
+			{
+				unlink($filePath);
+				$result=['key'=>$key,'message'=>'删除图片成功'];
+			}
+			else
+			{
+				$result=['key'=>$key,'error'=>'文件不存在'];
+			}
+		}
+		else
+		{
+			$result=['key'=>'','error'=>'查询不到文件'];
+		}
+		
 		
 		$this->returnJSON($result);
 
