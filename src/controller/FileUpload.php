@@ -28,9 +28,32 @@ trait FileUpload
 		return htmlspecialchars($_POST[$name] ?? '');
 	}
 
+	// 上传目录的模块名，默认取前端参数，控制器可固定覆盖
+	protected function getModuleName(): string
+	{
+		return $this->post('moduleName');
+	}
+
 	protected function errorJson(array $error)
 	{
 		$this->returnJSON(['code' => $error['code'], 'error' => $error['error']]);
+	}
+
+	// 单个文件的完整校验流程，校验失败调用 errorJson 并返回 null
+	protected function uploadFile($file)
+	{
+		if ($this->maxSize > 0 && ($file->getSize() / 1024 > $this->maxSize)) {
+			$this->errorJson(['code' => 10002, 'error' => '超出最大文件大小']);
+			return null;
+		}
+		if (!in_array(strtolower($file->getExtension()), $this->allowedFileExtensions)) {
+			$this->errorJson(['code' => 10003, 'error' => '非法文件类型']);
+			return null;
+		}
+		if ($this->beforeSave($file) !== true) {
+			return null;
+		}
+		return $this->storeFile($file);
 	}
 
 	protected function previewJson(string $url, string $type, string $key, int $size, array $extra = [])
@@ -60,7 +83,7 @@ trait FileUpload
 			'size' => $row['size'],
 			'auth_type' => $this->auth->getCurrentAuthType(),
 			'auth_id' => $this->auth->getCurrentAuthId(),
-			'module_name' => $this->post('moduleName'),
+			'module_name' => $this->getModuleName(),
 			'controller_name' => $this->post('controllerName'),
 			'action_name' => $this->post('actionName'),
 			'action_params' => $this->post('actionParams'),
@@ -82,18 +105,16 @@ trait FileUpload
 			return;
 		}
 		$file = current($files);
-		if ($this->maxSize > 0 && ($file->getSize() / 1024 > $this->maxSize)) {
-			$this->errorJson(['code' => 10002, 'error' => '超出最大文件大小']);
+		$result = $this->uploadFile($file);
+		if ($result === null) {
 			return;
 		}
-		if (!in_array(strtolower($file->getExtension()), $this->allowedFileExtensions)) {
-			$this->errorJson(['code' => 10003, 'error' => '非法文件类型']);
-			return;
-		}
-		if ($this->beforeSave($file) !== true) {
-			return;
-		}
+		$this->buildResult($file, $result[0], $result[1], $result[2]);
+	}
 
+	// 按 模块/年月 建目录并落盘，返回 [相对目录, 相对文件, 访问URL前缀]，失败返回 null
+	protected function storeFile($file)
+	{
 		$ds = XQ_DS;
 		$upload_path = call_user_func(['xqkeji\\App', 'getUploadPath']);
 		$upload_path_name = call_user_func(['xqkeji\\App', 'getUploadPathName']);
@@ -101,7 +122,7 @@ trait FileUpload
 		if (!file_exists($upload_path)) {
 			mkdir($upload_path, 0777);
 		}
-		$des_path = $this->post('moduleName');
+		$des_path = $this->getModuleName();
 		if (!file_exists($upload_path . $des_path . $ds)) {
 			mkdir($upload_path . $des_path . $ds, 0777);
 		}
@@ -113,9 +134,9 @@ trait FileUpload
 		$dest_file = $des_path . $ds . $file_name . '.' . $file->getExtension();
 		if (!$file->moveTo($upload_path . $dest_file)) {
 			$this->errorJson(['code' => 10006, 'error' => '文件上传失败']);
-			return;
+			return null;
 		}
-		$this->buildResult($file, $des_path, $dest_file, $upload_url);
+		return [$des_path, $dest_file, $upload_url];
 	}
 
 	public function delete()
@@ -140,8 +161,29 @@ trait FileUpload
 		}
 	}
 
-	// 删除主文件前的钩子，用于删除缩略图等附属文件
+	// 按规格生成缩略图，返回缩略图的相对路径，失败返回 null
+	protected function makeThumb(string $extension, string $destFile, array $thumbConfig)
+	{
+		$upload_path = call_user_func(['xqkeji\\App', 'getUploadPath']);
+		$thumb_file = substr($destFile, 0, -strlen('.' . $extension)) . '_thumb.' . $extension;
+		$image = new \xqkeji\image\adapter\Gd($upload_path . $destFile);
+		$image->resize($thumbConfig['width'], $thumbConfig['height'], $thumbConfig['master']);
+		return $image->save($upload_path . $thumb_file) ? $thumb_file : null;
+	}
+
+	// 删除主文件时同步删除缩略图，控制器无 thumb_url 字段时自动跳过
 	protected function deleteRelated($row, string $www_path, string $filePath): void
 	{
+		$field = $this->thumbUrlField ?? '';
+		if ($field == '') {
+			return;
+		}
+		$thumb_url = $row->getAttr($field);
+		if ($thumb_url != '') {
+			$thumbPath = $www_path . str_replace(['/', '\\'], XQ_DS, $thumb_url);
+			if (is_file($thumbPath)) {
+				unlink($thumbPath);
+			}
+		}
 	}
 }

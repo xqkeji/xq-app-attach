@@ -69,12 +69,8 @@ class Image extends Controller
 		$thumb_url='';
 		if($thumbConfig!==false)
 		{
-			$ds=XQ_DS;
-			$upload_path=call_user_func(['xqkeji\\App','getUploadPath']);
-			$thumb_file=$desPath.$ds.substr($destFile,strlen($desPath.$ds),-strlen('.'.$file->getExtension())).'_thumb.'.$file->getExtension();
-			$image=new \xqkeji\image\adapter\Gd($upload_path.$destFile);
-			$image->resize($thumbConfig['width'],$thumbConfig['height'],$thumbConfig['master']);
-			if(!$image->save($upload_path.$thumb_file))
+			$thumb_file=$this->makeThumb($file->getExtension(),$destFile,$thumbConfig);
+			if($thumb_file===null)
 			{
 				$this->errorJson(['code'=>10008,'error'=>'生成缩略图失败']);
 				return;
@@ -87,19 +83,5 @@ class Image extends Controller
 			'size'=>$file->getSize(),
 		]);
 		$this->previewJson($image_url,'image',$key,$file->getSize());
-	}
-
-	// 删除主图时同步删除缩略图
-	protected function deleteRelated($row, string $www_path, string $filePath): void
-	{
-		$thumb_url=$row->getAttr($this->thumbUrlField);
-		if($thumb_url!='')
-		{
-			$thumbPath=$www_path.str_replace(['/','\\'],XQ_DS,$thumb_url);
-			if(is_file($thumbPath))
-			{
-				unlink($thumbPath);
-			}
-		}
 	}
 }

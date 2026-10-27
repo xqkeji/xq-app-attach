@@ -4,6 +4,7 @@ return [
 		'login'=>[
 			'file'=>['upload','delete'],
 			'image'=>['upload','delete'],
+			'editor'=>['upload','browse'],
 		],
 	],
 ];
