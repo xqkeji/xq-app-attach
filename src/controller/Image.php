@@ -7,6 +7,7 @@
 namespace xqkeji\app\attach\controller;
 
 use xqkeji\mvc\Controller;
+use xqkeji\app\attach\traits\FileUpload;
 
 class Image extends Controller
 {
@@ -26,6 +27,7 @@ class Image extends Controller
 	public $fileType='image';
 	public $fileUrlField='image_url';
 	public $thumbUrlField='thumb_url';
+	public $modelTable='fileinput';// 与重构前 Fileinput 控制器同表，历史数据不分裂
 	public $deleteMessage='删除图片成功';
 
 	// 落盘前校验图片宽高，并提前确认GD扩展可用
@@ -77,11 +79,10 @@ class Image extends Controller
 			}
 			$thumb_url=$uploadUrl.str_replace('\\','/',$thumb_file);
 		}
-		$key=$this->saveRow([
+		$key=$this->saveRow($file,[
 			'image_url'=>$image_url,
 			'thumb_url'=>$thumb_url,
-			'size'=>$file->getSize(),
 		]);
-		$this->previewJson($image_url,'image',$key,$file->getSize());
+		$this->previewJson($file,$image_url,'image',$key,true);
 	}
 }

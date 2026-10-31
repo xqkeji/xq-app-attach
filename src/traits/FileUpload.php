@@ -4,13 +4,15 @@
  * @copyright 2021 新齐科技 (http://www.xqkeji.cn/)
  * @author 张文豪  <support@xqkeji.cn>
  */
-namespace xqkeji\app\attach\controller;
+namespace xqkeji\app\attach\traits;
 
 use xqkeji\mvc\builder\Model;
 
 /**
  * bootstrap-fileinput ajax 上传的公共流程（校验->落盘->入库->回显），供图片/文档控制器复用
- * 使用方需定义属性：$allowedFileExtensions、$maxSize、$maxFileCount、$fileType、$fileUrlField、$deleteMessage
+ * 使用方需定义属性：$allowedFileExtensions、$maxSize、$maxFileCount、$fileUrlField、$deleteMessage
+ * $fileType 可选：入库行里已显式给出 type 时无需定义
+ * $modelTable 可选：留档表名，为空时框架按当前控制器名推断
  */
 trait FileUpload
 {
@@ -56,31 +58,46 @@ trait FileUpload
 		return $this->storeFile($file);
 	}
 
-	protected function previewJson(string $url, string $type, string $key, int $size, array $extra = [])
+	// caption 取上传文件的原始名，而非前端的 input id
+	protected function fileName($file): string
 	{
+		return htmlspecialchars($file->getName());
+	}
+
+	// zoomable=false：文档类预览无法放大，不应返回 zoomData
+	protected function previewJson($file, string $url, string $type, string $key, bool $zoomable = false)
+	{
+		$config = [
+			'type' => $type,
+			'caption' => $this->fileName($file),
+			'key' => $key,
+			'size' => $file->getSize(),
+		];
+		if ($zoomable) {
+			$config['zoomData'] = $url;
+		}
 		$this->returnJSON([
 			'initialPreview' => [$url],
 			'initialPreviewAsData' => true,
-			'initialPreviewConfig' => [
-				array_merge([
-					'type' => $type,
-					'caption' => $this->post('fileId'),
-					'key' => $key,
-					'size' => $size,
-					'zoomData' => $url,
-				], $extra),
-			],
+			'initialPreviewConfig' => [$config],
 			'append' => true,
 		]);
 	}
 
-	protected function saveRow(array $row): string
+	// 附件模型：$modelTable 为空时按框架默认（当前控制器名）推断表名
+	protected function model()
 	{
-		$model = Model::getModel();
+		$table = $this->modelTable ?? '';
+		return $table === '' ? Model::getModel() : Model::getModel($table);
+	}
+
+	protected function saveRow($file, array $row): string
+	{
+		$model = $this->model();
 		$model->save(array_merge([
-			'type' => $this->fileType,
-			'caption' => $this->post('fileId'),
-			'size' => $row['size'],
+			'type' => $this->fileType ?? '',
+			'caption' => $this->fileName($file),
+			'size' => $file->getSize(),
 			'auth_type' => $this->auth->getCurrentAuthType(),
 			'auth_id' => $this->auth->getCurrentAuthId(),
 			'module_name' => $this->getModuleName(),
@@ -144,7 +161,7 @@ trait FileUpload
 		$this->view->disable();
 		$www_path = call_user_func(['xqkeji\\App', 'getWwwPath']);
 		$key = htmlspecialchars($_POST['key'] ?? '');
-		$model = Model::getModel();
+		$model = $this->model();
 		$row = $model->find($key);
 		if (empty($row)) {
 			$this->returnJSON(['key' => '', 'error' => '查询不到文件']);

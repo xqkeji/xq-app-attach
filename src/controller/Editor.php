@@ -7,12 +7,12 @@
 namespace xqkeji\app\attach\controller;
 
 use xqkeji\mvc\Controller;
-use xqkeji\mvc\builder\Model;
+use xqkeji\app\attach\traits\FileUpload;
 
 /**
  * hugerte(tinymce) 富文本编辑器的文件上传控制器
  * 接口约定：上传成功的响应为 {"location":"文件URL"}，失败为 {"location":"0","error":"..."}
- * 上传的文件会写入附件表留痕（module_name=editor），便于统一统计/清理
+ * 上传的文件写入 editor 留档表（module_name 取前端 moduleName，未传时为 editor），便于统一统计/清理
  */
 class Editor extends Controller
 {
@@ -29,9 +29,11 @@ class Editor extends Controller
 	public $maxHeight=0;//限制图片最大高度
 	public $browseThumb=['width'=>200,'height'=>null,'master'=>\xqkeji\image\Enum::WIDTH];//浏览列表预览图规格
 	public $browsePageSize=20;//浏览列表每页条数
-	public $moduleName='editor';//上传目录的模块名
+	public $browseSortField='_id';//Mongo 主键随时间递增，倒序即最新在前；框架若映射为 id 则改此处
+	public $moduleName='editor';//前端未传 moduleName 时的默认模块名
 	public $fileUrlField='file_url';
 	public $thumbUrlField='thumb_url';
+	public $modelTable='editor';// 编辑器上传单独成表
 	public $deleteMessage='删除文件成功';
 
 	// 编辑器上传单个文件，通过扩展名区分图片/文档并应用各自的大小限制
@@ -59,9 +61,11 @@ class Editor extends Controller
 		$this->returnJSON(['location'=>'0','error'=>$error['error']]);
 	}
 
+	// 优先用前端 uploadExtraData 传的 moduleName，编辑器页面没传时归入 editor 目录
 	protected function getModuleName(): string
 	{
-		return $this->moduleName;
+		$moduleName=$this->post('moduleName');
+		return $moduleName!==''?$moduleName:$this->moduleName;
 	}
 
 	protected function beforeSave($file)
@@ -108,18 +112,16 @@ class Editor extends Controller
 			}
 			$thumb_url=$uploadUrl.str_replace('\\','/',$thumb_file);
 		}
-		$this->saveRow([
+		$this->saveRow($file,[
 			'file_url'=>$file_url,
 			'thumb_url'=>$thumb_url,
 			'type'=>$extension,
-			'caption'=>htmlspecialchars($file->getName()),
-			'size'=>$file->getSize(),
 		]);
 		$this->returnJSON(['location'=>$file_url]);
 	}
 
 	// 供 file_picker_callback 的浏览弹窗取数据：?types=jpg,png&page=1&page_size=20
-	// types 为扩展名列表（逗号分隔），不传则返回全部；全站范围，不限上传人
+	// types 为扩展名列表（逗号分隔），不传则返回全部；只查 editor 集合，不限上传人
 	public function browse()
 	{
 		$this->view->disable();
@@ -143,28 +145,28 @@ class Editor extends Controller
 		}
 		$page=max((int)($_GET['page'] ?? 1),1);
 		$pageSize=(int)($_GET['page_size'] ?? 0)>0?(int)$_GET['page_size']:$this->browsePageSize;
-		// Image 控制器入库的 type 固定为 'image'（不记扩展名），图片浏览需一并命中
-		if(array_intersect($types,$this->imageExtensions))
-		{
-			$types[]='image';
-		}
 
-		$model=Model::getModel();
-		$rows=$this->filterTypes($model,$types)->order(['id'=>'desc'])->limit(($page-1)*$pageSize,$pageSize)->findAll();
+		$rows=$this->filterTypes($this->model(),$types)->order([$this->browseSortField=>'desc'])->limit(($page-1)*$pageSize,$pageSize)->findAll();
 		$rows=is_array($rows)?$rows:[];
 		$list=[];
 		foreach($rows as $row)
 		{
-			$url=$this->value($row,'file_url')?:$this->value($row,'image_url');
-			if((string)$url==='')
+			$url=$this->value($row,'file_url');
+			if($url==='')
 			{
 				continue;
 			}
+			// Mongo 文档主键为 _id，兼容框架映射出的 id
+			$key=$this->value($row,'_id');
+			if($key==='')
+			{
+				$key=$this->value($row,'id');
+			}
 			$list[]=[
-				'key'=>$this->value($row,'id'),
+				'key'=>$key,
 				'url'=>$url,
-				'thumb'=>$this->value($row,'thumb_url')?:$url,
-				'name'=>$this->value($row,'caption')?:basename(str_replace('\\','/',$url)),
+				'thumb'=>$this->value($row,'thumb_url')!==''?$this->value($row,'thumb_url'):$url,
+				'name'=>$this->value($row,'caption')!==''?$this->value($row,'caption'):basename(str_replace('\\','/',$url)),
 				'size'=>(int)$this->value($row,'size'),
 				'type'=>$this->value($row,'type'),
 			];

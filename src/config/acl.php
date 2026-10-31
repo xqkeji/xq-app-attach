@@ -2,7 +2,7 @@
 return [
 	'admin'=>[
 		'login'=>[
-			'file'=>['upload','delete'],
+			'doc'=>['upload','delete'],
 			'image'=>['upload','delete'],
 			'editor'=>['upload','browse'],
 		],
