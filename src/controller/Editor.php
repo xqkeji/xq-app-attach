@@ -61,13 +61,6 @@ class Editor extends Controller
 		$this->returnJSON(['location'=>'0','error'=>$error['error']]);
 	}
 
-	// 优先用前端 uploadExtraData 传的 moduleName，编辑器页面没传时归入 editor 目录
-	protected function getModuleName(): string
-	{
-		$moduleName=$this->post('moduleName');
-		return $moduleName!==''?$moduleName:$this->moduleName;
-	}
-
 	protected function beforeSave($file)
 	{
 		if(in_array(strtolower($file->getExtension()),$this->imageExtensions,true))
@@ -112,10 +105,13 @@ class Editor extends Controller
 			}
 			$thumb_url=$uploadUrl.str_replace('\\','/',$thumb_file);
 		}
+		// 编辑器页面一般不传 moduleName，留痕时归入 editor，便于按来源统计/清理
+		$moduleName=$this->post('moduleName');
 		$this->saveRow($file,[
 			'file_url'=>$file_url,
 			'thumb_url'=>$thumb_url,
 			'type'=>$extension,
+			'module_name'=>$moduleName!==''?$moduleName:$this->moduleName,
 		]);
 		$this->returnJSON(['location'=>$file_url]);
 	}

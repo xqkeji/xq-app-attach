@@ -30,12 +30,6 @@ trait FileUpload
 		return htmlspecialchars($_POST[$name] ?? '');
 	}
 
-	// 上传目录的模块名，默认取前端参数，控制器可固定覆盖
-	protected function getModuleName(): string
-	{
-		return $this->post('moduleName');
-	}
-
 	protected function errorJson(array $error)
 	{
 		$this->returnJSON(['code' => $error['code'], 'error' => $error['error']]);
@@ -100,7 +94,7 @@ trait FileUpload
 			'size' => $file->getSize(),
 			'auth_type' => $this->auth->getCurrentAuthType(),
 			'auth_id' => $this->auth->getCurrentAuthId(),
-			'module_name' => $this->getModuleName(),
+			'module_name' => $this->post('moduleName'),
 			'controller_name' => $this->post('controllerName'),
 			'action_name' => $this->post('actionName'),
 			'action_params' => $this->post('actionParams'),
@@ -162,6 +156,7 @@ trait FileUpload
 		$www_path = call_user_func(['xqkeji\\App', 'getWwwPath']);
 		$key = htmlspecialchars($_POST['key'] ?? '');
 		$model = $this->model();
+		
 		$row = $model->find($key);
 		if (empty($row)) {
 			$this->returnJSON(['key' => '', 'error' => '查询不到文件']);
@@ -172,6 +167,7 @@ trait FileUpload
 		if (is_file($filePath)) {
 			$this->deleteRelated($row, $www_path, $filePath);
 			unlink($filePath);
+			$row->delete();// 文件已删除，同步删除留档记录
 			$this->returnJSON(['key' => $key, 'message' => $this->deleteMessage]);
 		} else {
 			$this->returnJSON(['key' => $key, 'error' => '文件不存在']);
