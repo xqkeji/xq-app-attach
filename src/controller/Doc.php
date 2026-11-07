@@ -18,7 +18,7 @@ class Doc extends Controller
 	public $maxFileCount=1;//上传最多的文件数
 	public $fileType='';
 	public $fileUrlField='file_url';
-	public $modelTable='fileinput';// 与重构前 Fileinput 控制器同表，历史数据不分裂
+	public $modelTable='attach_fileinput';// 留档集合按「模块_控制器」命名，与 fileinput 列表同表
 	public $deleteMessage='删除文档成功';
 
 	protected function buildResult($file, $desPath, $destFile, $uploadUrl)

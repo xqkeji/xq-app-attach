@@ -27,7 +27,7 @@ class Image extends Controller
 	public $fileType='image';
 	public $fileUrlField='image_url';
 	public $thumbUrlField='thumb_url';
-	public $modelTable='fileinput';// 与重构前 Fileinput 控制器同表，历史数据不分裂
+	public $modelTable='attach_fileinput';// 留档集合按「模块_控制器」命名，与 fileinput 列表同表
 	public $deleteMessage='删除图片成功';
 
 	// 落盘前校验图片宽高，并提前确认GD扩展可用

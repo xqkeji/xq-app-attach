@@ -33,7 +33,7 @@ class Editor extends Controller
 	public $moduleName='editor';//前端未传 moduleName 时的默认模块名
 	public $fileUrlField='file_url';
 	public $thumbUrlField='thumb_url';
-	public $modelTable='editor';// 编辑器上传单独成表
+	public $modelTable='admin_editor';// 编辑器上传单独成表，须与 xq-app-admin 的 table/Editor.php $name 一致
 	public $deleteMessage='删除文件成功';
 
 	// 编辑器上传单个文件，通过扩展名区分图片/文档并应用各自的大小限制
